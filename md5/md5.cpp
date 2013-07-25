@@ -15,12 +15,15 @@ Md5::Md5() :
 Md5::~Md5() {
 }
 
+#define LEFTROTATE(x, c) (((x) << (c)) | ((x) >> (32 - (c))))
+
 void Md5::update(ui8 data[], size_t start, size_t len) {
 	// Calculate the remaining size of the buffer
 	size_t remaining = CHUNK_SIZE - buffer_index;
 
 	// If there isn't enough data to fill the buffer,
 	// add the data and return
+	printf("len = %d ; remaining = %d\n", len, remaining);
 	if(len < remaining) {
 		// Copy data into the buffer
 		memcpy(&buffer[buffer_index], &data[start], len);
@@ -29,17 +32,38 @@ void Md5::update(ui8 data[], size_t start, size_t len) {
 		return;
 	}
 
+	for(int i = 0 ; i < remaining ; ++i) {
+		printf("%x ", data[start + i]);
+	}
+	printf("\n");
+
 	// Fill the buffer
-	memcpy(&buffer[buffer_index], &data[start], remaining);
+	memcpy(buffer + buffer_index, data + start, remaining);
 	// Reset the buffer pointer
 	buffer_index = 0;
 
-	/*
-	 * Hash the buffer
-	 */
+	//
+	// Hash the buffer
+	//
+
+	ui8 msg[] = {
+		0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	};
+
+	ui32 w[16];
+	ui32 a, b, c, d, i, f, g, temp;
+
+	A = 0x67452301;
+	B = 0xefcdab89;
+	C = 0x98badcfe;
+	D = 0x10325476;
+
 
 	// Represent buffer as 16 32-bit words
-	ui32 words[16] = {
+	/*ui32 words[16] = {
 		bytes_to_int(buffer), bytes_to_int(&buffer[4]),
 		bytes_to_int(&buffer[8]), bytes_to_int(&buffer[12]),
 		bytes_to_int(&buffer[16]), bytes_to_int(&buffer[20]),
@@ -52,20 +76,43 @@ void Md5::update(ui8 data[], size_t start, size_t len) {
 
 	// Get the current state to manipulate
 	ui32 a = A, b = B, c = C, d = D;
+	ui32 f, g, z, tmp;
 	size_t i;
+
+#define ROTATION \
+tmp = d;\
+d = c;\
+c = b;\
+z = (a + f + salts[i] + words[g]);\
+b = b + ((z << shifts[i]) | (z >> (32-shifts[i])));\
+a = tmp;
 
 	// First round
 	for( ; i < 16 ; ++i) {
-		ui32 f = (b & c) | ((!b) & d);
-		ui32 g = i;
-		// Rotate function
-		ui32 z = (a + f + salts[i] + words[g]);
-		// Shift state
-		ui32 tmp = d;
-		d = c;
-		c = b;
-		b = b + ((z << shifts[i]) | (z >> (32-shifts[i])));
-		a = tmp;
+		f = (b & c) | ((!b) & d);
+		g = i;
+		ROTATION
+	}
+
+	// Second round
+	for( ; i < 32 ; ++i) {
+		f = (d & b) | ((~b) & c);
+		g = (5 * i + 1) % 16;
+		ROTATION
+	}
+
+	// Third round
+	for( ; i < 32 ; ++i) {
+		f = b ^ c ^ d;
+		g = (3 * i + 5) % 16;
+		ROTATION
+	}
+
+	// Forth round
+	for( ; i < 32 ; ++i) {
+		f = c ^ (b | (~d));
+		g = (7 * i) % 16;
+		ROTATION
 	}
 
 	// Add to the hash
@@ -82,7 +129,7 @@ void Md5::update(ui8 data[], size_t start, size_t len) {
 		memcpy(buffer, &data[start + remaining], left_over);
 		// Update the buffer pointer
 		buffer_index = left_over;
-	}
+	}*/
 }
 
 std::string Md5::finish() {
@@ -102,30 +149,69 @@ std::string Md5::finish(ui8 data[], unsigned int start,
 		   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 	};
 
-	update(d, 0, CHUNK_SIZE);
+	/*update(d, 0, CHUNK_SIZE);*/
+
+	ui32 h[4] = { A, B, C, D };
+	this->hash(h, d);
+
+	ui8 digest[16];
+	int_to_bytes(&digest[0], h[0]);
+	int_to_bytes(&digest[4], h[1]);
+	int_to_bytes(&digest[8], h[2]);
+	int_to_bytes(&digest[12], h[3]);
 
 	char hash[32];
-	ui32 h[4] = { A, B, C, D };
-	for(int i = 0, k = 0 ; i < 4 ; ++i) {
-		for(int j = 28 ; j >= 0 ; j -= 4) {
-			printf("k = %d ;i = %d ; j = %d ; (h[i] >> j) & 0x0f = %d ; hex = %c\n", k, i, j, (h[i] >> j) & 0x0f, hex[(int)((h[i] >> j) & 0x0f)]);
-			int x = (h[i] >> j) & 0x0f;
-			hash[k++] = hex[x];
-		}
+	for(char i = 0, j = 0 ; i < 16 ; ++i) {
+		hash[j++] = hex[(digest[i] >> 4) & 0x0f];
+		hash[j++] = hex[digest[i] & 0x0f];
 	}
-printf("%s\n", hex);
 
 	return std::string(hash, 32);
 }
 
-void Md5::int_to_bytes(ui8* bytes, ui32 intt) {
+void Md5::hash(ui32 hash[4], const ui8 buffer[64]) {
+	ui32 a = hash[0];
+	ui32 b = hash[1];
+	ui32 c = hash[2];
+	ui32 d = hash[3];
+
+	for(char i = 0 ; i < 64 ; ++i) {
+		ui32 f, g, temp;
+		if(i < 16) {
+			f = (b & c) | ((~b) & d);
+			g = i;
+		} else if(i < 32) {
+			f = (d & b) | ((~d) & c);
+			g = (5*i + 1) % 16;
+		} else if(i < 48) {
+			f = b ^ c ^ d;
+			g = (3*i + 5) % 16;
+		} else {
+			f = c ^ (b | (~d));
+			g = (7*i) % 16;
+		}
+
+		temp = d;
+		d = c;
+		c = b;
+		b = b + LEFTROTATE((a + f + salts[i] + buffer[g]), shifts[i]);
+		a = temp;
+	}
+
+	hash[0] += a;
+	hash[1] += b;
+	hash[2] += c;
+	hash[3] += d;
+}
+
+void Md5::int_to_bytes(ui8 bytes[4], const ui32 intt) {
 	bytes[0] = (ui8)intt;
     bytes[1] = (ui8)(intt >> 8);
     bytes[2] = (ui8)(intt >> 16);
     bytes[3] = (ui8)(intt >> 24);
 }
 
-ui32 Md5::bytes_to_int(ui8* bytes) {
+ui32 Md5::bytes_to_int(const ui8 bytes[4]) {
 	return (ui32) bytes[0]
         | ((ui32) bytes[1] << 8)
         | ((ui32) bytes[2] << 16)
