@@ -5,7 +5,9 @@
 #include <stdint.h>
 #include <string>
 
+#define DIGEST_SIZE 16
 #define CHUNK_SIZE 64
+#define WORD_SIZE 4
 
 typedef uint8_t ui8;
 typedef uint32_t ui32;
@@ -24,7 +26,7 @@ private:
 	size_t buffer_index;
 
 	static void int_to_bytes(ui8* bytes, const ui32 intt);
-	static ui32 bytes_to_int(const ui8 bytes[4]);
+	static ui32 bytes_to_int(const ui8 bytes[WORD_SIZE]);
 
 	void hash_buffer();
 
@@ -32,10 +34,10 @@ public:
 	Md5();
 	virtual ~Md5();
 
- 	static std::string digest_to_string(const ui8 digest[16]);
+ 	static std::string digest_to_string(const ui8 digest[DIGEST_SIZE]);
 
 	void update(const ui8* const data, size_t len);
-	void finish(ui8 digest[16]);
+	void finish(ui8 digest[DIGEST_SIZE]);
 
 };
 

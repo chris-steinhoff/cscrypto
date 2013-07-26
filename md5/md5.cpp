@@ -1,6 +1,7 @@
 
-#include <string.h>
 #include "md5.h"
+
+extern "C" { void *memcpy(void *destination, const void *source, size_t num); }
 
 Md5::Md5() :
 		length(0),
@@ -14,14 +15,14 @@ Md5::Md5() :
 Md5::~Md5() {
 }
 
-std::string Md5::digest_to_string(const ui8 digest[16]) {
-	char hash[32];
-	for(char i = 0, j = 0 ; i < 16 ; ++i) {
+std::string Md5::digest_to_string(const ui8 digest[DIGEST_SIZE]) {
+	char hash[DIGEST_SIZE * 2];
+	for(unsigned char i = 0, j = 0 ; i < DIGEST_SIZE ; ++i) {
 		hash[j++] = hex[(digest[i] >> 4) & 0x0f];
 		hash[j++] = hex[digest[i] & 0x0f];
 	}
 
-	return std::string(hash, 32);
+	return std::string(hash, DIGEST_SIZE * 2);
 }
 
 void Md5::update(const ui8* const data, size_t len) {
@@ -52,7 +53,10 @@ void Md5::update(const ui8* const data, size_t len) {
 	}
 }
 
-void Md5::finish(ui8 digest[16]) {
+// 64 - 8 = 56
+#define LENGTH_WORD_INDEX 56
+
+void Md5::finish(ui8 digest[DIGEST_SIZE]) {
 	// Append the 0x80 terminator
 	buffer[buffer_index++] = 0x80;
 	// If the terminator filled the buffer, hash it.
@@ -62,17 +66,18 @@ void Md5::finish(ui8 digest[16]) {
 	}
 	// If there isn't enough room for the length word,
 	// fill the buffer, hash it, then hash another buffer with padding.
-	else if(buffer_index > 56) {
+	else if(buffer_index > LENGTH_WORD_INDEX) {
 		memcpy(&buffer[buffer_index], padding, CHUNK_SIZE - buffer_index);
 		hash_buffer();
 		buffer_index = 0;
 	}
 
 	// Append 0 padding upto the length word.
-	memcpy(&buffer[buffer_index], padding, 56 - buffer_index);
+	memcpy(&buffer[buffer_index], padding, LENGTH_WORD_INDEX - buffer_index);
 
 	// Append length
 	// Set the last 64-bits to the legth, least significant 32-bit word first.
+	// There are 16 32-bit words in the 512-bit buffer.
 	((ui32*)buffer)[14] = (ui32)((length * 8) & 0x00000000ffffffff);
 	((ui32*)buffer)[15] = (ui32)((length >> 29) & 0x00000000ffffffff);
 
@@ -91,7 +96,7 @@ void Md5::hash_buffer() {
 	ui32 f, g, z, temp;
 	unsigned char i = 0;
 
-	// Represent buffer as 16 32-bit words
+	// Represent 512-bit buffer as 16 32-bit words
 	const ui32 words[16] = {
 		bytes_to_int(buffer), bytes_to_int(&buffer[4]),
 		bytes_to_int(&buffer[8]), bytes_to_int(&buffer[12]),
@@ -146,7 +151,7 @@ a = temp;
 	D += d;
 }
 
-void Md5::int_to_bytes(ui8 bytes[4], const ui32 intt) {
+void Md5::int_to_bytes(ui8 bytes[WORD_SIZE], const ui32 intt) {
 	bytes[0] = (ui8)intt;
     bytes[1] = (ui8)(intt >> 8);
     bytes[2] = (ui8)(intt >> 16);
