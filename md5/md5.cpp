@@ -15,6 +15,16 @@ Md5::Md5() :
 Md5::~Md5() {
 }
 
+std::string Md5::digest_to_string(const ui8 digest[16]) {
+	char hash[32];
+	for(char i = 0, j = 0 ; i < 16 ; ++i) {
+		hash[j++] = hex[(digest[i] >> 4) & 0x0f];
+		hash[j++] = hex[digest[i] & 0x0f];
+	}
+
+	return std::string(hash, 32);
+}
+
 #define LEFTROTATE(x, c) (((x) << (c)) | ((x) >> (32 - (c))))
 
 void Md5::update(ui8 data[], size_t start, size_t len) {
@@ -132,16 +142,7 @@ a = tmp;
 	}*/
 }
 
-std::string Md5::finish() {
-	return finish(NULL, 0, 0);
-}
-
-std::string Md5::finish(ui8 data[], unsigned int start,
-		unsigned int len) {
-	if(data) {
-		update(data, start, len);
-	}
-
+void Md5::finish(ui8 digest[16]) {
 	ui8 d[CHUNK_SIZE] = {
 		0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -149,31 +150,21 @@ std::string Md5::finish(ui8 data[], unsigned int start,
 		   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 	};
 
-	/*update(d, 0, CHUNK_SIZE);*/
+	memcpy(buffer, d, CHUNK_SIZE);
 
-	ui32 h[4] = { A, B, C, D };
-	this->hash(h, d);
+	hash_buffer();
 
-	ui8 digest[16];
-	int_to_bytes(&digest[0], h[0]);
-	int_to_bytes(&digest[4], h[1]);
-	int_to_bytes(&digest[8], h[2]);
-	int_to_bytes(&digest[12], h[3]);
-
-	char hash[32];
-	for(char i = 0, j = 0 ; i < 16 ; ++i) {
-		hash[j++] = hex[(digest[i] >> 4) & 0x0f];
-		hash[j++] = hex[digest[i] & 0x0f];
-	}
-
-	return std::string(hash, 32);
+	int_to_bytes(&digest[ 0], A);
+	int_to_bytes(&digest[ 4], B);
+	int_to_bytes(&digest[ 8], C);
+	int_to_bytes(&digest[12], D);
 }
 
-void Md5::hash(ui32 hash[4], const ui8 buffer[64]) {
-	ui32 a = hash[0];
-	ui32 b = hash[1];
-	ui32 c = hash[2];
-	ui32 d = hash[3];
+void Md5::hash_buffer() {
+	ui32 a = A;
+	ui32 b = B;
+	ui32 c = C;
+	ui32 d = D;
 
 	for(char i = 0 ; i < 64 ; ++i) {
 		ui32 f, g, temp;
@@ -182,13 +173,13 @@ void Md5::hash(ui32 hash[4], const ui8 buffer[64]) {
 			g = i;
 		} else if(i < 32) {
 			f = (d & b) | ((~d) & c);
-			g = (5*i + 1) % 16;
+			g = (5 * i + 1) % 16;
 		} else if(i < 48) {
 			f = b ^ c ^ d;
-			g = (3*i + 5) % 16;
+			g = (3 * i + 5) % 16;
 		} else {
 			f = c ^ (b | (~d));
-			g = (7*i) % 16;
+			g = (7 * i) % 16;
 		}
 
 		temp = d;
@@ -198,10 +189,10 @@ void Md5::hash(ui32 hash[4], const ui8 buffer[64]) {
 		a = temp;
 	}
 
-	hash[0] += a;
-	hash[1] += b;
-	hash[2] += c;
-	hash[3] += d;
+	A += a;
+	B += b;
+	C += c;
+	D += d;
 }
 
 void Md5::int_to_bytes(ui8 bytes[4], const ui32 intt) {
