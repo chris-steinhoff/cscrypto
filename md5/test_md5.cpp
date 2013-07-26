@@ -60,7 +60,7 @@ int main() {
 	}
 
 	str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-	expected = "8c0b45ac70826fd5e9e12800bb53ccee";
+	expected = "0269bb6c2060579ecfd687c025ae2b47";
 
 	Md5 md_long_alpha;
 	md_long_alpha.update((uint8_t*)str.data(), 0, str.length());

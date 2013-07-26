@@ -33,39 +33,22 @@ void Md5::update(ui8 data[], size_t start, size_t len) {
 	length += len;
 
 	// Calculate the remaining size of the buffer
-	size_t remaining = CHUNK_SIZE - buffer_index;
+	size_t available = CHUNK_SIZE - buffer_index;
 
-	// If there isn't enough data to fill the buffer,
-	// add the data and return
-	printf("len = %d ; remaining = %d\n", len, remaining);
-	if(len < remaining) {
-		// Copy data into the buffer
-		memcpy(&buffer[buffer_index], &data[start], len);
-		// Update the buffer pointer
-		buffer_index += len;
-		return;
-	}
-
-	/*for(int i = 0 ; i < remaining ; ++i) {
-		printf("%x ", data[start + i]);
-	}
-	printf("\n");*/
-
-	// Fill the buffer
-	memcpy(buffer + buffer_index, data + start, remaining);
-	// Reset the buffer pointer
-	buffer_index = 0;
-
-	hash_buffer();
-
-	// If there is more data then what remained in the buffer,
-	// add the left over to the buffer
-	if(len > remaining) {
-		// Copy left over data
-		size_t left_over = len - remaining;
-		memcpy(buffer, &data[start + remaining], left_over);
-		// Update the buffer pointer
-		buffer_index = left_over;
+	// Keep filling up the buffer until all data has been processed.
+	while(len > 0) {
+		if(len < available) {
+			memcpy(&buffer[buffer_index], &data[start], len);
+			buffer_index += len;
+			len = 0;
+		} else {
+			memcpy(&buffer[buffer_index], &data[start], available);
+			hash_buffer();
+			buffer_index = 0;
+			len -= available;
+			available = CHUNK_SIZE;
+			start += available;
+		}
 	}
 
 
