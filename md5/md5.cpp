@@ -26,28 +26,30 @@ std::string Md5::digest_to_string(const ui8 digest[16]) {
 	return std::string(hash, 32);
 }
 
-#define LEFTROTATE(x, c) (((x) << (c)) | ((x) >> (32 - (c))))
-
-void Md5::update(ui8 data[], size_t start, size_t len) {
+void Md5::update(const ui8* const data, size_t len) {
 	// Update length
 	length += len;
 
-	// Calculate the remaining size of the buffer
+	// Calculate the remaining size of the buffer.
 	size_t available = CHUNK_SIZE - buffer_index;
-
+	// The loop needs to track of where in the data to start copying from.
+	size_t start = 0;
 	// Keep filling up the buffer until all data has been processed.
 	while(len > 0) {
 		if(len < available) {
-			memcpy(&buffer[buffer_index], &data[start], len);
+			// Add the data to the buffer and return
+			memcpy(&buffer[buffer_index], data + start, len);
 			buffer_index += len;
 			len = 0;
 		} else {
-			memcpy(&buffer[buffer_index], &data[start], available);
+			// Fill the buffer, hash it,
+			// and continue the loop with the remaining data.
+			memcpy(&buffer[buffer_index], data + start, available);
 			hash_buffer();
 			buffer_index = 0;
 			len -= available;
-			available = CHUNK_SIZE;
 			start += available;
+			available = CHUNK_SIZE;
 		}
 	}
 
@@ -122,17 +124,36 @@ a = tmp;
 	}*/
 }
 
-void Md5::finish(ui8 digest[16]) {
-	short pad_count = 57 - buffer_index;
+#define LEFTROTATE(x, c) (((x) << (c)) | ((x) >> (32 - (c))))
 
-	memcpy(buffer + buffer_index, padding, pad_count);
+void Md5::finish(ui8 digest[16]) {
+	// Append the 0x80 terminator
+	buffer[buffer_index++] = 0x80;
+	// If the terminator filled the buffer, hash it.
+	if(buffer_index == CHUNK_SIZE) {
+		hash_buffer();
+		buffer_index = 0;
+	}
+	// If there isn't enough room for the length word,
+	// fill the buffer, hash it, then hash another buffer with padding.
+	else if(buffer_index > 56) {
+		memcpy(&buffer[buffer_index], padding, CHUNK_SIZE - buffer_index);
+		hash_buffer();
+		buffer_index = 0;
+	}
+
+	// Append 0 padding upto the length word.
+	memcpy(&buffer[buffer_index], padding, 56 - buffer_index);
 
 	// Append length
-	((ui32*)buffer)[14] = (ui32)(length * 8);
-	((ui32*)buffer)[15] = (ui32)(length >> 29);
+	// Set the last 64-bits to the legth, least significant 32-bit word first.
+	((ui32*)buffer)[14] = (ui32)((length * 8) & 0x00000000ffffffff);
+	((ui32*)buffer)[15] = (ui32)((length >> 29) & 0x00000000ffffffff);
 
+	// Hash the buffer for the last time.
 	hash_buffer();
 
+	// Concatinate the state variables into the digest.
 	int_to_bytes(&digest[ 0], A);
 	int_to_bytes(&digest[ 4], B);
 	int_to_bytes(&digest[ 8], C);
@@ -140,6 +161,7 @@ void Md5::finish(ui8 digest[16]) {
 }
 
 void Md5::hash_buffer() {
+	//std::cout << "Hashing buffer: " << buffer << std::endl;
 	ui32 words[16];
 	ui32 a = A;
 	ui32 b = B;
@@ -224,10 +246,10 @@ const char Md5::hex[17] = {
 '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', NULL
 };
 
-const ui8 Md5::padding[64] = {
-	0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+const ui8 Md5::padding[63] = {
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 

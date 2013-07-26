@@ -16,7 +16,7 @@ private:
 	const static ui32 salts[64];
 	const static ui32 shifts[64];
 	const static char hex[17];
-	const static ui8  padding[64];
+	const static ui8  padding[63];
 
 	ui64 length;
 	ui32 A, B, C, D;
@@ -34,7 +34,7 @@ public:
 
  	static std::string digest_to_string(const ui8 digest[16]);
 
-	void update(ui8 data[], size_t start, size_t len);
+	void update(const ui8* const data, size_t len);
 	void finish(ui8 digest[16]);
 
 };
