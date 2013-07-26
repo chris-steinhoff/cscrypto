@@ -1,10 +1,11 @@
 
+#include <iostream>
 #include <stdio.h>
 #include <string.h>
 #include "md5.h"
 
 Md5::Md5() :
-		len(0),
+		length(0),
 		A(0x67452301),
 		B(0xefcdab89),
 		C(0x98badcfe),
@@ -28,6 +29,9 @@ std::string Md5::digest_to_string(const ui8 digest[16]) {
 #define LEFTROTATE(x, c) (((x) << (c)) | ((x) >> (32 - (c))))
 
 void Md5::update(ui8 data[], size_t start, size_t len) {
+	// Update length
+	length += len;
+
 	// Calculate the remaining size of the buffer
 	size_t remaining = CHUNK_SIZE - buffer_index;
 
@@ -42,34 +46,27 @@ void Md5::update(ui8 data[], size_t start, size_t len) {
 		return;
 	}
 
-	for(int i = 0 ; i < remaining ; ++i) {
+	/*for(int i = 0 ; i < remaining ; ++i) {
 		printf("%x ", data[start + i]);
 	}
-	printf("\n");
+	printf("\n");*/
 
 	// Fill the buffer
 	memcpy(buffer + buffer_index, data + start, remaining);
 	// Reset the buffer pointer
 	buffer_index = 0;
 
-	//
-	// Hash the buffer
-	//
+	hash_buffer();
 
-	ui8 msg[] = {
-		0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	};
-
-	ui32 w[16];
-	ui32 a, b, c, d, i, f, g, temp;
-
-	A = 0x67452301;
-	B = 0xefcdab89;
-	C = 0x98badcfe;
-	D = 0x10325476;
+	// If there is more data then what remained in the buffer,
+	// add the left over to the buffer
+	if(len > remaining) {
+		// Copy left over data
+		size_t left_over = len - remaining;
+		memcpy(buffer, &data[start + remaining], left_over);
+		// Update the buffer pointer
+		buffer_index = left_over;
+	}
 
 
 	// Represent buffer as 16 32-bit words
@@ -143,14 +140,13 @@ a = tmp;
 }
 
 void Md5::finish(ui8 digest[16]) {
-	ui8 d[CHUNK_SIZE] = {
-		0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	};
+	short pad_count = 57 - buffer_index;
 
-	memcpy(buffer, d, CHUNK_SIZE);
+	memcpy(buffer + buffer_index, padding, pad_count);
+
+	// Append length
+	((ui32*)buffer)[14] = (ui32)(length * 8);
+	((ui32*)buffer)[15] = (ui32)(length >> 29);
 
 	hash_buffer();
 
@@ -161,12 +157,17 @@ void Md5::finish(ui8 digest[16]) {
 }
 
 void Md5::hash_buffer() {
+	ui32 words[16];
 	ui32 a = A;
 	ui32 b = B;
 	ui32 c = C;
 	ui32 d = D;
 
-	for(char i = 0 ; i < 64 ; ++i) {
+	for(char i = 0 ; i < 16 ; ++i) {
+		words[i] = bytes_to_int(buffer + i * 4);
+	}
+
+	for(int i = 0 ; i < 64 ; ++i) {
 		ui32 f, g, temp;
 		if(i < 16) {
 			f = (b & c) | ((~b) & d);
@@ -185,7 +186,7 @@ void Md5::hash_buffer() {
 		temp = d;
 		d = c;
 		c = b;
-		b = b + LEFTROTATE((a + f + salts[i] + buffer[g]), shifts[i]);
+		b = b + LEFTROTATE((a + f + salts[i] + words[g]), shifts[i]);
 		a = temp;
 	}
 
@@ -238,5 +239,12 @@ const ui32 Md5::shifts[64] = {
 const char Md5::hex[17] = {
 '0', '1', '2', '3', '4', '5', '6', '7',
 '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', NULL
+};
+
+const ui8 Md5::padding[64] = {
+	0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 

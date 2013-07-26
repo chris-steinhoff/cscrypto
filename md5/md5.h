@@ -16,8 +16,9 @@ private:
 	const static ui32 salts[64];
 	const static ui32 shifts[64];
 	const static char hex[17];
+	const static ui8  padding[64];
 
-	ui64 len;
+	ui64 length;
 	ui32 A, B, C, D;
 	ui8 buffer[CHUNK_SIZE];
 	size_t buffer_index;
