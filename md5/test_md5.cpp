@@ -1,78 +1,85 @@
 
+#include <gtest/gtest.h>
 #include <iostream>
 #include "md5.h"
 
-int main() {
-	ui8 digest[16];
-	std::string str = "";
-	std::string expected = "d41d8cd98f00b204e9800998ecf8427e";
+ui8 digest[16];
 
+TEST(MD5, NoUpdate) {
 	Md5 md;
 	md.finish(digest);
-	std::string hash = Md5::digest_to_string(digest);
-	if(expected.compare(hash) != 0) {
-		std::cerr << "FAILED:" << std::endl << "  expected: " << expected <<
-			std::endl << "    actual: " << hash << std::endl;
-	} else {
-		std::cout << "PASSED" << std::endl;
+	ASSERT_STREQ(
+		"d41d8cd98f00b204e9800998ecf8427e",
+		Md5::digest_to_string(digest).c_str()
+	);
+}
+
+TEST(MD5, EmptyUpdate) {
+	Md5 md;
+	md.update(NULL, 0, 0);
+	md.finish(digest);
+	ASSERT_STREQ(
+		"d41d8cd98f00b204e9800998ecf8427e",
+		Md5::digest_to_string(digest).c_str()
+	);
+}
+
+TEST(MD5, Short_SingleUpdate) {
+	Md5 md;
+	std::string str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+	md.update((uint8_t*)str.data(), 0, str.length());
+	md.finish(digest);
+	ASSERT_STREQ(
+		"f29939a25efabaef3b87e2cbfe641315",
+		Md5::digest_to_string(digest).c_str()
+	);
+}
+
+TEST(MD5, Long_SingleUpdate) {
+	Md5 md;
+	std::string str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+	                  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+	                  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+	                  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+	md.update((uint8_t*)str.data(), 0, str.length());
+	md.finish(digest);
+	ASSERT_STREQ(
+		"0269bb6c2060579ecfd687c025ae2b47",
+		Md5::digest_to_string(digest).c_str()
+	);
+}
+
+TEST(MD5, Short_MultiUpdate) {
+	Md5 md;
+	std::string str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+	for(char i = 0 ; i < 2 ; ++i) {
+		md.update((uint8_t*)str.data(), str.length()/2*i, str.length()/2);
 	}
+	md.finish(digest);
+	ASSERT_STREQ(
+		"f29939a25efabaef3b87e2cbfe641315",
+		Md5::digest_to_string(digest).c_str()
+	);
+}
 
-	str = "The quick brown fox jumps over the lazy dog";
-	expected = "9e107d9d372bb6826bd81d3542a419d6";
-
-	Md5 md_dog;
-	md_dog.update((uint8_t*)str.data(), 0, str.length());
-	md_dog.finish(digest);
-	hash = Md5::digest_to_string(digest);
-	if(expected.compare(hash) != 0) {
-		std::cerr << "FAILED:" << std::endl << "  expected: " << expected <<
-			std::endl << "    actual: " << hash << std::endl;
-	} else {
-		std::cout << "PASSED" << std::endl;
+TEST(MD5, Long_MultiUpdate) {
+	Md5 md;
+	std::string str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+	                  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+	                  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+	                  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+	for(char i = 0 ; i < 4 ; ++i) {
+		md.update((uint8_t*)str.data(), str.length()/4*i, str.length()/4);
 	}
+	md.finish(digest);
+	ASSERT_STREQ(
+		"0269bb6c2060579ecfd687c025ae2b47",
+		Md5::digest_to_string(digest).c_str()
+	);
+}
 
-	str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-	expected = "f29939a25efabaef3b87e2cbfe641315";
-
-	Md5 md_alpha;
-	md_alpha.update((uint8_t*)str.data(), 0, str.length());
-	md_alpha.finish(digest);
-	hash = Md5::digest_to_string(digest);
-	if(expected.compare(hash) != 0) {
-		std::cerr << "FAILED:" << std::endl << "  expected: " << expected <<
-			std::endl << "    actual: " << hash << std::endl;
-	} else {
-		std::cout << "PASSED" << std::endl;
-	}
-
-	str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-	expected = "8c0b45ac70826fd5e9e12800bb53ccee";
-
-	Md5 md_medium_alpha;
-	md_medium_alpha.update((uint8_t*)str.data(), 0, str.length());
-	md_medium_alpha.finish(digest);
-	hash = Md5::digest_to_string(digest);
-	if(expected.compare(hash) != 0) {
-		std::cerr << "FAILED:" << std::endl << "  expected: " << expected <<
-			std::endl << "    actual: " << hash << std::endl;
-	} else {
-		std::cout << "PASSED" << std::endl;
-	}
-
-	str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-	expected = "0269bb6c2060579ecfd687c025ae2b47";
-
-	Md5 md_long_alpha;
-	md_long_alpha.update((uint8_t*)str.data(), 0, str.length());
-	md_long_alpha.finish(digest);
-	hash = Md5::digest_to_string(digest);
-	if(expected.compare(hash) != 0) {
-		std::cerr << "FAILED:" << std::endl << "  expected: " << expected <<
-			std::endl << "    actual: " << hash << std::endl;
-	} else {
-		std::cout << "PASSED" << std::endl;
-	}
-
-	return 0;
+int main(int argc, char** argv) {
+	::testing::InitGoogleTest(&argc, argv);
+	return RUN_ALL_TESTS();
 }
 
