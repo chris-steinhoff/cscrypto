@@ -1,6 +1,6 @@
 
 HEADERS=md5.h
-OBJS=md5.o
+OBJS=basic_md5.o
 TEST_OBJS=test_md5.o
 TEST_INC=/usr/local/include
 GTEST_LIB=/usr/local/lib64/libgtest.a
