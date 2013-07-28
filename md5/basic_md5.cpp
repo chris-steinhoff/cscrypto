@@ -1,9 +1,7 @@
 
-#include "md5.h"
+#include "basic_md5.h"
 
-extern "C" { void *memcpy(void *destination, const void *source, size_t num); }
-
-Md5::Md5() :
+BasicMd5::BasicMd5() :
 		length(0),
 		A(0x67452301),
 		B(0xefcdab89),
@@ -12,20 +10,10 @@ Md5::Md5() :
 		buffer_index(0) {
 }
 
-Md5::~Md5() {
+BasicMd5::~BasicMd5() {
 }
 
-std::string Md5::digest_to_string(const ui8 digest[DIGEST_SIZE]) {
-	char hash[DIGEST_SIZE * 2];
-	for(unsigned char i = 0, j = 0 ; i < DIGEST_SIZE ; ++i) {
-		hash[j++] = hex[(digest[i] >> 4) & 0x0f];
-		hash[j++] = hex[digest[i] & 0x0f];
-	}
-
-	return std::string(hash, DIGEST_SIZE * 2);
-}
-
-void Md5::update(const ui8* const data, size_t len) {
+void BasicMd5::update(const ui8* const data, size_t len) {
 	// Update length
 	length += len;
 
@@ -56,7 +44,7 @@ void Md5::update(const ui8* const data, size_t len) {
 // 64 - 8 = 56
 #define LENGTH_WORD_INDEX 56
 
-void Md5::finish(ui8 digest[DIGEST_SIZE]) {
+void BasicMd5::finish(ui8 digest[DIGEST_SIZE]) {
 	// Append the 0x80 terminator
 	buffer[buffer_index++] = 0x80;
 	// If the terminator filled the buffer, hash it.
@@ -85,27 +73,27 @@ void Md5::finish(ui8 digest[DIGEST_SIZE]) {
 	hash_buffer();
 
 	// Concatinate the state variables into the digest.
-	int_to_bytes(&digest[ 0], A);
-	int_to_bytes(&digest[ 4], B);
-	int_to_bytes(&digest[ 8], C);
-	int_to_bytes(&digest[12], D);
+	Md5::int_to_bytes(&digest[ 0], A);
+	Md5::int_to_bytes(&digest[ 4], B);
+	Md5::int_to_bytes(&digest[ 8], C);
+	Md5::int_to_bytes(&digest[12], D);
 }
 
-void Md5::hash_buffer() {
+void BasicMd5::hash_buffer() {
 	ui32 a = A, b = B, c = C, d = D;
 	ui32 f, g, z, temp;
 	unsigned char i = 0;
 
 	// Represent 512-bit buffer as 16 32-bit words
 	const ui32 words[16] = {
-		bytes_to_int(buffer), bytes_to_int(&buffer[4]),
-		bytes_to_int(&buffer[8]), bytes_to_int(&buffer[12]),
-		bytes_to_int(&buffer[16]), bytes_to_int(&buffer[20]),
-		bytes_to_int(&buffer[24]), bytes_to_int(&buffer[28]),
-		bytes_to_int(&buffer[32]), bytes_to_int(&buffer[36]),
-		bytes_to_int(&buffer[40]), bytes_to_int(&buffer[44]),
-		bytes_to_int(&buffer[48]), bytes_to_int(&buffer[52]),
-		bytes_to_int(&buffer[56]), bytes_to_int(&buffer[60])
+		Md5::bytes_to_int(buffer),      Md5::bytes_to_int(&buffer[4]),
+		Md5::bytes_to_int(&buffer[8]),  Md5::bytes_to_int(&buffer[12]),
+		Md5::bytes_to_int(&buffer[16]), Md5::bytes_to_int(&buffer[20]),
+		Md5::bytes_to_int(&buffer[24]), Md5::bytes_to_int(&buffer[28]),
+		Md5::bytes_to_int(&buffer[32]), Md5::bytes_to_int(&buffer[36]),
+		Md5::bytes_to_int(&buffer[40]), Md5::bytes_to_int(&buffer[44]),
+		Md5::bytes_to_int(&buffer[48]), Md5::bytes_to_int(&buffer[52]),
+		Md5::bytes_to_int(&buffer[56]), Md5::bytes_to_int(&buffer[60])
 	};
 
 #define ROTATION \
@@ -150,56 +138,4 @@ a = temp;
 	C += c;
 	D += d;
 }
-
-void Md5::int_to_bytes(ui8 bytes[WORD_SIZE], const ui32 intt) {
-	bytes[0] = (ui8)intt;
-    bytes[1] = (ui8)(intt >> 8);
-    bytes[2] = (ui8)(intt >> 16);
-    bytes[3] = (ui8)(intt >> 24);
-}
-
-ui32 Md5::bytes_to_int(const ui8 bytes[4]) {
-	return (ui32) bytes[0]
-        | ((ui32) bytes[1] << 8)
-        | ((ui32) bytes[2] << 16)
-        | ((ui32) bytes[3] << 24);
-}
-
-const ui32 Md5::salts[64] = {
-0xd76aa478, 0xe8c7b756, 0x242070db, 0xc1bdceee,
-0xf57c0faf, 0x4787c62a, 0xa8304613, 0xfd469501,
-0x698098d8, 0x8b44f7af, 0xffff5bb1, 0x895cd7be,
-0x6b901122, 0xfd987193, 0xa679438e, 0x49b40821,
-0xf61e2562, 0xc040b340, 0x265e5a51, 0xe9b6c7aa,
-0xd62f105d, 0x02441453, 0xd8a1e681, 0xe7d3fbc8,
-0x21e1cde6, 0xc33707d6, 0xf4d50d87, 0x455a14ed,
-0xa9e3e905, 0xfcefa3f8, 0x676f02d9, 0x8d2a4c8a,
-0xfffa3942, 0x8771f681, 0x6d9d6122, 0xfde5380c,
-0xa4beea44, 0x4bdecfa9, 0xf6bb4b60, 0xbebfbc70,
-0x289b7ec6, 0xeaa127fa, 0xd4ef3085, 0x04881d05,
-0xd9d4d039, 0xe6db99e5, 0x1fa27cf8, 0xc4ac5665,
-0xf4292244, 0x432aff97, 0xab9423a7, 0xfc93a039,
-0x655b59c3, 0x8f0ccc92, 0xffeff47d, 0x85845dd1,
-0x6fa87e4f, 0xfe2ce6e0, 0xa3014314, 0x4e0811a1,
-0xf7537e82, 0xbd3af235, 0x2ad7d2bb, 0xeb86d391
-};
-
-const ui32 Md5::shifts[64] = {
-7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22,
-5,  9, 14, 20, 5,  9, 14, 20, 5,  9, 14, 20, 5,  9, 14, 20,
-4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23,
-6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21
-};
-
-const char Md5::hex[17] = {
-'0', '1', '2', '3', '4', '5', '6', '7',
-'8', '9', 'a', 'b', 'c', 'd', 'e', 'f', NULL
-};
-
-const ui8 Md5::padding[63] = {
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-};
 

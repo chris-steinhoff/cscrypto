@@ -2,11 +2,12 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include "md5.h"
+#include "basic_md5.h"
 
 ui8 digest[16];
 
 TEST(MD5, NoUpdate) {
-	Md5 md;
+	BasicMd5 md;
 	md.finish(digest);
 	ASSERT_STREQ(
 		"d41d8cd98f00b204e9800998ecf8427e",
@@ -15,7 +16,7 @@ TEST(MD5, NoUpdate) {
 }
 
 TEST(MD5, EmptyUpdate) {
-	Md5 md;
+	BasicMd5 md;
 	md.update(NULL, 0);
 	md.finish(digest);
 	ASSERT_STREQ(
@@ -25,7 +26,7 @@ TEST(MD5, EmptyUpdate) {
 }
 
 TEST(MD5, Short_SingleUpdate) {
-	Md5 md;
+	BasicMd5 md;
 	std::string str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 	md.update((uint8_t*)str.data(), str.length());
 	md.finish(digest);
@@ -36,7 +37,7 @@ TEST(MD5, Short_SingleUpdate) {
 }
 
 TEST(MD5, Long_SingleUpdate) {
-	Md5 md;
+	BasicMd5 md;
 	std::string str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 	                  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 	                  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
@@ -50,7 +51,7 @@ TEST(MD5, Long_SingleUpdate) {
 }
 
 TEST(MD5, Short_MultiUpdate) {
-	Md5 md;
+	BasicMd5 md;
 	std::string str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 	for(char i = 0 ; i < 2 ; ++i) {
 		md.update((uint8_t*)str.data() + str.length()/2*i, str.length()/2);
@@ -63,7 +64,7 @@ TEST(MD5, Short_MultiUpdate) {
 }
 
 TEST(MD5, Long_MultiUpdate) {
-	Md5 md;
+	BasicMd5 md;
 	std::string str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 	                  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 	                  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
@@ -80,7 +81,7 @@ TEST(MD5, Long_MultiUpdate) {
 
 // Should add 0x80 byte and no 0 padding
 TEST(MD5, FinishOneLessThenLengthBoundary) {
-	Md5 md;
+	BasicMd5 md;
 	std::string str = "123456789012345678901234567890"
 	                  "1234567890123456789012345";
 	md.update((uint8_t*)str.data(), str.length());
@@ -94,7 +95,7 @@ TEST(MD5, FinishOneLessThenLengthBoundary) {
 // Should add 0x80 byte, add 0 padding to fill buffer and hash the buffer,
 // then fill another buffer with padding and hash that.
 TEST(MD5, FinishOnLengthBoundary) {
-	Md5 md;
+	BasicMd5 md;
 	std::string str = "123456789012345678901234567890"
 	                  "12345678901234567890123456";
 	md.update((uint8_t*)str.data(), str.length());
@@ -108,7 +109,7 @@ TEST(MD5, FinishOnLengthBoundary) {
 // Should add 0x80 byte, add 0 padding to fill buffer and hash the buffer,
 // then fill another buffer with padding and hash that.
 TEST(MD5, FinishWithinLengthWord) {
-	Md5 md;
+	BasicMd5 md;
 	std::string str = "123456789012345678901234567890"
 	                  "123456789012345678901234567890";
 	md.update((uint8_t*)str.data(), str.length());
@@ -120,7 +121,7 @@ TEST(MD5, FinishWithinLengthWord) {
 }
 
 TEST(MD5, FinishOneLessThenBoundary) {
-	Md5 md;
+	BasicMd5 md;
 	std::string str = "123456789012345678901234567890"
 	                  "123456789012345678901234567890"
 	                  "123";
@@ -134,7 +135,7 @@ TEST(MD5, FinishOneLessThenBoundary) {
 
 // Should add 0x80 byte and a full buffer (minus one) of padding
 TEST(MD5, FinishOnBoundary) {
-	Md5 md;
+	BasicMd5 md;
 	std::string str = "123456789012345678901234567890"
 	                  "123456789012345678901234567890"
 	                  "1234";
