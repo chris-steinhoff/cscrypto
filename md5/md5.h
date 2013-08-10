@@ -13,6 +13,8 @@ typedef uint8_t ui8;
 typedef uint32_t ui32;
 typedef uint64_t ui64;
 
+extern "C" { void *memcpy(void *destination, const void *source, size_t num); }
+
 class Md5 {
 public:
 	static const ui32 salts[64];

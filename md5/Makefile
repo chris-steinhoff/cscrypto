@@ -1,6 +1,6 @@
 
-HEADERS=md5.h basic_md5.h
-OBJS=md5.o basic_md5.o
+HEADERS=md5.h basic_md5.h sse_md5.h
+OBJS=md5.o basic_md5.o sse_md5.o
 TEST_INC=/usr/local/include
 BENCH_INC=../hayai/src
 GTEST_LIB=/usr/local/lib64/libgtest.a
